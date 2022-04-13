@@ -1,0 +1,12 @@
+setuptools
+icalendar
+datetime
+# pathlib
+pandas
+#pyodbc-4.0.32-cp310-cp310-win_amd64.whl
+datetime
+pytz
+pickle-mixin
+google-api-python-client
+google-auth-oauthlib
+google
