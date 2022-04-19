@@ -1,7 +1,9 @@
 import pickle
 import os
 import datetime
+from time import time, sleep
 from dateutil.tz import tzlocal
+import numpy as np
 import pandas as pd
 import logging
 
@@ -33,7 +35,7 @@ def setup_log():
     open(logs_file, 'a').close()
 
     logging.basicConfig(filename=logs_file, filemode='w', format='%(name)s - %(levelname)s - %(message)s')
-    logging.debug(f"Log file: {start_time.strftime('%Y-%m-%d_%H-%M')} \n \n ")
+    logging.info(f"Log file: {start_time.strftime('%Y-%m-%d_%H-%M')} \n \n ")
 
 
 def getCalendarService():
@@ -69,30 +71,32 @@ def listCalendarsFromGoogle(service):
     try:
         # Call the Calendar API
         cals = {}
-        logging.debug('Getting list of calendars >>>> ')
-        # print('Getting list of calendars >>>> ')
+        logging.info('Getting list of calendars >>>> ')
+        print('Getting list of calendars >>>> ')
         calendars_result = service.calendarList().list().execute()
 
         calendars = calendars_result.get('items', [])
 
         if not calendars:
-            logging.debug('No calendars found.')
-            # print('No calendars found.')
+            logging.info('No calendars found.')
+            print('No calendars found.')
         for calendar in calendars:
             summary = calendar['summary']
             id = calendar['id']
             primary = "Primary" if calendar.get('primary') else ""
+            logging.info("%s\t%s\t%s" % (summary, id, primary))
     #         print("%s\t%s\t%s" % (summary, id, primary))
             cals[summary] = id
-        logging.debug(f'{len(calendars)} calendars found!\n')
-        # print(f'{len(calendars)} calendars found!\n')
+        logging.info(f'{len(calendars)} calendars found!\n')
+        print(f'{len(calendars)} calendars found!\n')
     except Exception as e:
         logging.error(e)
     return cals
 
 
 
-def addEventToGoogle(df, service, locali = None):
+def addEventToGoogle(df, service, locali = None, attempt = 0, deadline = 10, waittime = 61):
+    c_attempt = attempt
     try:
         calsDict = listCalendarsFromGoogle(service)
         timezone = 'Europe/Rome'
@@ -119,11 +123,11 @@ def addEventToGoogle(df, service, locali = None):
                 }
                 cal = service.calendars().insert(body=calendar).execute()   
                 calId = cal['id']
-                logging.debug(f"Calendar {l} is added")
-                # print(f"Calendar {l} is added")
+                logging.info(f"Calendar {l} is added")
+                print(f"Calendar {l} is added")
             else:
-                logging.debug(f"Calendar {l} already exists")
-                # print(f"Calendar {l} already exists")
+                logging.info(f"Calendar {l} already exists")
+                print(f"Calendar {l} already exists")
             
             events_all = []
             page_token = None
@@ -148,12 +152,12 @@ def addEventToGoogle(df, service, locali = None):
             l_fine = df_extra['Fine'].tolist()
             l_sede = df_extra['Db'].tolist()
 
-            logging.debug(f'{len(l_inizio)} new events' )
-            logging.debug(f'{len(df_cal["Inizio"])} old events' )
-            logging.debug(f'{len(df_t["Inizio"])} total events from today \n\n' )
-            # print(f'{len(l_inizio)} new events' )
-            # print(f'{len(df_cal["Inizio"])} old events' )
-            # print(f'{len(df_t["Inizio"])} total events \n\n' )
+            logging.info(f'{len(l_inizio)} new events' )
+            logging.info(f'{len(df_cal["Inizio"])} old events' )
+            logging.info(f'{len(df_t["Inizio"])} total events from today \n\n' )
+            print(f'{len(l_inizio)} new events' )
+            print(f'{len(df_cal["Inizio"])} old events' )
+            print(f'{len(df_t["Inizio"])} total events \n\n' )
             
             dl_inizio = df_deleted['Inizio'].tolist()
             dl_fine = df_deleted['Fine'].tolist()
@@ -161,8 +165,8 @@ def addEventToGoogle(df, service, locali = None):
             
             for d in range(len(l_inizio)):
                 
-                logging.debug(f'{d+1}: Adding event {l}, at {l_inizio[d]}')
-                # print(f'{d+1}: Adding event {l}, at {l_inizio[d]}')
+                logging.info(f'{d+1}: Adding event {l}, at {l_inizio[d]}')
+                print(f'{d+1}: Adding event {l}, at {l_inizio[d]}')
                 event_result = service.events().insert(calendarId=calId,
                 body={
                 "summary": l,
@@ -173,10 +177,27 @@ def addEventToGoogle(df, service, locali = None):
                 ).execute()
             
             for d in range(len(dl_inizio)):
-                logging.debug(f'{d+1}: Deleting event {l}, at {dl_inizio[d]}')
-                # print(f'{d+1}: Deleting event {l}, at {dl_inizio[d]}')
+                logging.info(f'{d+1}: Deleting event {l}, at {dl_inizio[d]}')
+                print(f'{d+1}: Deleting event {l}, at {dl_inizio[d]}')
     #            print(service.events().list(calendarId=calId, timeMin=dl_inizio[d], timeMax=dl_fine[d]).execute())
                 eventId = service.events().list(calendarId=calId, timeMin=dl_inizio[d], timeMax=dl_fine[d]).execute()['items'][0]['id']
                 service.events().delete(calendarId =calId, eventId = eventId).execute()
-    except Exception as e:
+    except Exception as e:        
         logging.error(e)
+        if '403' in str(e):
+            logging.error('403')
+        if c_attempt < deadline:
+            logging.error(f'Reattempt #{c_attempt+1}')
+            print(f'Reattempt #{c_attempt+1}')
+            logging.error(f'Waiting for {waittime}s')
+            print(f'Waiting for {waittime}s')
+            sleep((waittime)+np.random.random())
+            addEventToGoogle(df, service, locali = locali, attempt = c_attempt+1)
+        else:
+            logging.error(f'Reattempt finished')
+            print(f'Reattempt finished')
+            
+            quit()
+        # print(e)
+    # finally:
+    #     return True
