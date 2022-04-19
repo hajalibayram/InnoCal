@@ -20,17 +20,19 @@ CREATOR_EMAIL = 'bayramov@its-ictpiemonte.it'
 def setup_log():
     start_time = datetime.datetime.now()
     logs_folder = "logs/"
+    logs_file=f"{logs_folder}/{start_time.strftime('%Y-%m-%d_%H-%M')}.log"
 
     if os.path.exists(logs_folder):
         print(FileExistsError(f"{logs_folder} already exists!"))
     else:
         os.makedirs(logs_folder, exist_ok=True)
-    base_formatter = logging.Formatter('%(asctime)s   %(message)s', "%Y-%m-%d %H:%M")
+    # base_formatter = logging.Formatter('%(asctime)s   %(message)s', "%Y-%m-%d %H:%M")
     logger = logging.getLogger('')
     logger.setLevel(logging.DEBUG)
 
-    
-    logging.basicConfig(filename=f"{logs_folder+'/'+start_time.strftime('%Y-%m-%d_%H-%M')}.log", filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+    open(logs_file, 'a').close()
+
+    logging.basicConfig(filename=logs_file, filemode='w', format='%(name)s - %(levelname)s - %(message)s')
     logging.debug(f"Log file: {start_time.strftime('%Y-%m-%d_%H-%M')} \n \n ")
 
 
@@ -148,7 +150,7 @@ def addEventToGoogle(df, service, locali = None):
 
             logging.debug(f'{len(l_inizio)} new events' )
             logging.debug(f'{len(df_cal["Inizio"])} old events' )
-            logging.debug(f'{len(df_t["Inizio"])} total events \n\n' )
+            logging.debug(f'{len(df_t["Inizio"])} total events from today \n\n' )
             # print(f'{len(l_inizio)} new events' )
             # print(f'{len(df_cal["Inizio"])} old events' )
             # print(f'{len(df_t["Inizio"])} total events \n\n' )

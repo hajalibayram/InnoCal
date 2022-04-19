@@ -6,10 +6,11 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
-import pyodbc 
+import pyodbc
+from pytz import utc 
 
 
-from Util import getCalendarService, addEventToGoogle
+from Util import getCalendarService, addEventToGoogle, setup_log
 
 import json
 
@@ -31,6 +32,8 @@ with open('locali.txt', 'r') as f:
     content = f.readlines()
 
 locali = [x.replace('\n', '') for x in content if x[0]!='#']
+
+setup_log()
 
 service = getCalendarService()
 
