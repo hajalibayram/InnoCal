@@ -14,7 +14,7 @@ from Util import getCalendarService, addEventToGoogle, setup_log
 
 import json
 
-input_json = open ('input.json', "r")
+input_json = open ('config.json', "r")
 input_json = json.loads(input_json.read())
 server = input_json['server']
 port =  input_json['port']

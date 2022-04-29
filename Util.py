@@ -109,7 +109,7 @@ def addEventToGoogle(df, service, locali = None, attempt = 0, deadline = 10, wai
             df_t = df_t.sort_values(by=['Inizio'])
 
             # get events from yesterday and further 
-            df_t = df_t[df_t['Inizio'] > (datetime.datetime.utcnow() - datetime.timedelta(days=1)).isoformat()]
+            df_t = df_t[df_t['Inizio'] > (datetime.datetime.utcnow() - datetime.timedelta(hours=8)).isoformat()]
             
             df_t['Inizio'] = [t.replace(tzinfo = tzlocal()).isoformat() for t in df_t['Inizio']]
             df_t['Fine'] = [t.replace(tzinfo = tzlocal()).isoformat() for t in df_t['Fine']]
@@ -197,7 +197,8 @@ def addEventToGoogle(df, service, locali = None, attempt = 0, deadline = 10, wai
             logging.error(f'Reattempt finished')
             print(f'Reattempt finished')
             
-            quit()
+            
         # print(e)
-    # finally:
-    #     return True
+    finally:
+	
+        return True
