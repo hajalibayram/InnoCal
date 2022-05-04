@@ -22,7 +22,13 @@ database =  input_json['database']
 username =  input_json['username']
 password =  input_json['password']
 
-conn = pyodbc.connect('Driver={SQL Server};Server='+server+','+port+';Database='+database+';UID='+username+';PWD='+ password)
+try:
+    conn = pyodbc.connect('Driver={SQL Server};Server='+server+','+port+';Database='+database+';UID='+username+';PWD='+ password)
+except:
+    username =  input_json['username_backup']
+    password =  input_json['password_backup']
+    conn = pyodbc.connect('Driver={SQL Server};Server='+server+','+port+';Database='+database+';UID='+username+';PWD='+ password)
+
 raw_df = pd.read_sql_query('SELECT * FROM v_r_excelAuleCondiviseOCuupate', conn)
 
 df = raw_df.drop(columns=['Mese', 'Giorno', 'Sede'])
@@ -39,12 +45,13 @@ service = getCalendarService()
 
 addEventToGoogle(df, service, locali)
 
+locali_df = pd.read_sql_query('SELECT * FROM v_r_excelsituazione_Pin_Aule', conn)
 
 # Write original locali
 with open('locali_org.txt', 'w') as f:
-    locali_len = len(df['Locale'].unique().tolist())
+    locali_len = len(locali_df['locale'].str.strip().unique().tolist())
     print('Updating the original \"locali\"')
-    for i, l in enumerate(sorted(df['Locale'].unique().tolist())):
+    for i, l in enumerate(sorted(locali_df['locale'].str.strip().unique().tolist())):
         print(i,l)
         f.write(l)
         if i != locali_len-1:
