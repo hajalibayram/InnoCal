@@ -7,6 +7,7 @@ from dateutil.tz import tzlocal
 import numpy as np
 import pandas as pd
 import logging
+import pyodbc
 
 
 from googleapiclient.discovery import build
@@ -242,7 +243,7 @@ def addEventToGoogle(df, service, cals_dict, locali = None, deadline_days = 30, 
         return True
 
 
-def addEventToInnovaplan(df, service, cals_dict, locali, attempt = 0, deadline = 10, waittime = 61):
+def addEventToInnovaplan(df, service, cals_dict, locali, conn, attempt = 0, deadline = 10, waittime = 61):
     c_attempt = attempt
     timezone = 'Europe/Rome'
     deadline_days = 30
@@ -287,14 +288,16 @@ def addEventToInnovaplan(df, service, cals_dict, locali, attempt = 0, deadline =
                 enCal_out = []
                 summaryCal_out = []
                 creatorCal_out = []
+                idCal_out = []
                 
                 for d in events_all:
-                    print(d)
+                    # print(d)
                     if (d['creator']['email'] != CREATOR_EMAIL) & (d['start']['dateTime'] > datetime.datetime.utcnow().isoformat()) & (d['start']['dateTime'] < (datetime.datetime.utcnow() + datetime.timedelta(days=deadline_days)).isoformat()):
                         stCal_out.append(d['start']['dateTime'])
                         enCal_out.append(d['end']['dateTime'])
                         summaryCal_out.append(d['summary'])
                         creatorCal_out.append(d['creator']['email'])
+                        idCal_out.append(d['id'])
                         # pinCal_out.append(cal['location'])
                         # dbCal_out.append(cal['description'].split(';')[0])
                         # sedeCal_out.append(cal['description'].split(';')[1])
@@ -313,11 +316,11 @@ def addEventToInnovaplan(df, service, cals_dict, locali, attempt = 0, deadline =
                     print(f'{d+1}: Adding event {l} to Innovaplan, at {l_out_inizio[d]}')
         #            print(service.events().list(calendarId=calId, timeMin=dl_inizio[d], timeMax=dl_fine[d]).execute())
                     print(cal['location'])
-                    print(l_out_inizio[d])
-                    print(l_out_fine[d])
+                    # print(l_out_inizio[d])
+                    # print(l_out_fine[d])
         
-                    print(cal['description'].split(';')[0])
-                    print(cal['description'].split(';')[1])
+                    # print(cal['description'].split(';')[0])
+                    # print(cal['description'].split(';')[1])
                     # query = f"DECLARE @return_value int \
                     #             EXEC @return_value = [dbo].[spPrenotaAula]\
                     #             @Pin = '12345',\
@@ -326,16 +329,33 @@ def addEventToInnovaplan(df, service, cals_dict, locali, attempt = 0, deadline =
                     #             @NoteLocale = {summaryCal_out[d]}\
                     #         SELECT 'Return Value' = @return_value\
                     #         GO"
-                    query = f"create PROCEDURE [dbo].[spPrenotaAula]\
-                                @Pin {cal['location']},\
-                                @Inizio {stCal_out[d]}, \
-                                @Fine {enCal_out[d]}, \
-                                @NoteLocale {summaryCal_out[d]},\
-                                @email {creatorCal_out[d]},\
-                                @DB {cal['description'].split(';')[0]},\
-                                @Sede {cal['description'].split(';')[1]} AS \
-                                BEGIN"
-                    
+                    # query = f"DECLARE	@return_value int\
+                    #             EXEC	@return_value = [dbo].[spPrenotaAula]\
+                    #             @Pin {cal['location']},\
+                    #             @Inizio {stCal_out[d]}, \
+                    #             @Fine {enCal_out[d]}, \
+                    #             @NoteLocale {summaryCal_out[d]},\
+                    #             @email {creatorCal_out[d]},\
+                    #             @DB {cal['description'].split(';')[0]},\
+                    #             @Sede {cal['description'].split(';')[1]}"
+                    print(type(stCal_out[d]))
+                    st = datetime.datetime.fromisoformat(stCal_out[d]).strftime("%Y-%m-%d %H:%M:%S.%f").replace('.000000','.000')
+                    en = datetime.datetime.fromisoformat(enCal_out[d]).strftime("%Y-%m-%d %H:%M:%S.%f").replace('.000000','.000')
+                    # en = datetime.datetime.strptime(enCal_out[d], "%Y/%m/%d %H:%M:%S.%f")
+                    query = f"{cal['location']},\
+                                {st},\
+                                {en},\
+                                {summaryCal_out[d]},\
+                                {creatorCal_out[d]},\
+                                {cal['description'].split(';')[0]},\
+                                {cal['description'].split(';')[1]}"
+                    print("Query: \n", query)
+                    cursor = conn.cursor()
+                    cursor.execute(query)
+                    # commit the transaction
+                    cmm = conn.commit()
+                    print(cmm)
+
                     # service.events().insert(calendarId=calId,
                     # body={
                     # "summary": l,
@@ -344,11 +364,14 @@ def addEventToInnovaplan(df, service, cals_dict, locali, attempt = 0, deadline =
                     # }
                     # ).execute()
 
-        #             # cursor = conn.cursor()
-        #             # cursor.execute(query)
-        #             # # commit the transaction
-        #             # cmm = conn.commit()
-        #             # print(cmm)
+                    # service.events().delete(calendarId =calId, eventId = idCal_out[d]).execute()
+                    # # Establishing connection
+                   
+                    # cursor = conn.cursor()
+                    # cursor.execute(query)
+                    # # commit the transaction
+                    # cmm = conn.commit()
+                    # print(cmm)
                 
             except Exception as E:
                 print(E)

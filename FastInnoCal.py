@@ -53,7 +53,7 @@ raw_occ_df = pd.read_sql_query('SELECT * FROM v_r_excelAuleCondiviseOCuupate', c
 occ_df = raw_occ_df.drop(columns=['Mese', 'Giorno', 'Sede'])
 occ_df['Locale'] = occ_df['Locale'].str.strip()
 
-addEventToInnovaplan(occ_df, service, cals_dict, locali)
+addEventToInnovaplan(occ_df, service, cals_dict, locali, conn)
 
     
     
