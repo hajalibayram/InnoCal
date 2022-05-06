@@ -13,7 +13,7 @@ import pyodbc
 from pytz import utc 
 
 
-from Util import  addEventToGoogle, getCalendarService, listCalendarsFromGoogle, setup_log, createCalendars
+from Util import addEventToGoogle, addEventToInnovaplan, createCalendars, getCalendarService, listCalendarsFromGoogle, setup_log
 
 import json
 
@@ -40,28 +40,21 @@ except:
     conn = pyodbc.connect('Driver={SQL Server};Server='+server+','+port+';Database='+database+';UID='+username+';PWD='+ password)
 
 # All the "Aule"
-locali_df = pd.read_sql_query('SELECT * FROM v_r_excelsituazione_Pin_Aule', conn)
-locali_df.to_csv('locali_df.csv', index=False)
+try:
+    locali_df = pd.read_csv('locali_df.csv')
+except FileNotFoundError: 
+    locali_df = pd.read_sql_query('SELECT * FROM v_r_excelsituazione_Pin_Aule', conn)
+    print('Creating local ')
+    locali_df.to_csv('locali_df.csv', index=False)
 locali = sorted(locali_df['locale'].str.strip().unique().tolist())
-
-# Create calendars
-# createCalendars(locali_df, service, locali, cals_dict)
 
 # Aule Occupate
 raw_occ_df = pd.read_sql_query('SELECT * FROM v_r_excelAuleCondiviseOCuupate', conn)
 occ_df = raw_occ_df.drop(columns=['Mese', 'Giorno', 'Sede'])
 occ_df['Locale'] = occ_df['Locale'].str.strip()
 
-# From Innovaplan to Google
-addEventToGoogle(occ_df, service, locali, deadline_days=8)
+addEventToInnovaplan(occ_df, service, cals_dict, locali)
 
-# Write original locali
-with open('locali_org.txt', 'w') as f:
-    locali_len = len(locali_df['locale'].str.strip().unique().tolist())
-    print('Updating the original \"locali\"')
-    for i, l in enumerate(sorted(locali_df['locale'].str.strip().unique().tolist())):
-        print(i,l)
-        f.write(l)
-        if i != locali_len-1:
-            f.write('\n')   
+    
+    
 

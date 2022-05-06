@@ -4,3 +4,4 @@ logs
 *copy.py
 token.pickle
 *.pdf
+*.csv
